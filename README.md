@@ -36,7 +36,41 @@ Ansible is free and easy to use for automating tasks more efficiently. It is als
 - Ansible playbooks provide another way to use Ansible to automate tasks.
 - Ansible playbooks are .yaml/.yml files written in Yet Another Markup Language (YAML)
 - Playbooks start with 3 dashes (`---`)
-- 
+```
+# Create a playbook to install nginx web server on web machine
+# web 192.168.33.10
+# Let's add the 3 dashes to start the YAML 
+---
+# Add the name of the host
+- hosts: web
+
+  # Gather facts about the installation steps (optional)
+  gather_facts: yes
+
+  # We need admin access
+  become: true
+
+  # Add instructions to install nginx on web machine
+  tasks:
+  - name: Install Nginx
+    apt: pkg=nginx state=present
+    
+# Ensure the server is running
+```
+- Run playbook with `ansible-playbook nginx_playbook.yml`
+- Let's check if the playbook worked for us
+- `ansible web -a "sudo systemctl status nginx"`
+- Enter the IP address for the machine into the browser, and you should see the nginx page
+
+Task:
+- Create a playbook to install and configure node on the web machine
+- Create a playbook to install and configure mongodb on the db machine
+- Get the node app to work with /posts
+- HINT: ansible official documentation available
+- Youtube
+- Stack Overflow
+- Configure nginx reverse proxy
+
 
 # Ansible controller and agent nodes set up guide
 - Clone this repo and run `vagrant up`
