@@ -3,11 +3,40 @@
 ## What is IAC?
 IAC means managing your IT infrastructure using provisioning scripts instead of carrying out the tasks manually. For example, launching an EC2 instance involves a lot of manual handling (clicks, etc) - a script of instructions could be written to carry this out for you.
 
+### Types of IAC
+- Configuration Management
+- Orchestration
+
+### Which tools are used for push config and pull config
+
 ## What is Ansible?
 Ansible is an open-source configuration management tool. It is used for automating IT configuration tasks, such as launching and provisioning an EC2 instance.
 
 ## What are the benefits of Ansible?
 Ansible is free and easy to use for automating tasks more efficiently. It is also provides scalability, *unfinished*
+
+## Why should we use Ansible
+
+## Diagram for Ansible on prem, hybrid, and public
+
+## Installation and setting up Ansible controller with 2 agent nodes - including commands
+
+## Default Directory Structure for Ansible
+
+## What is the Inventory/hosts file and its purpose
+
+## What should be added to hosts file to establish secure connection between ansible controller and agent nodes? - include code
+
+## What are ansible `Ad-hoc commands`
+
+- add a structure of creating ad-hoc commands `ansible all -m ping`
+- include all the ad-hoc commands we have used today in this documentation
+
+## What are Ansible Playbooks?
+- Ansible playbooks provide another way to use Ansible to automate tasks.
+- Ansible playbooks are .yaml/.yml files written in Yet Another Markup Language (YAML)
+- Playbooks start with 3 dashes (`---`)
+- 
 
 # Ansible controller and agent nodes set up guide
 - Clone this repo and run `vagrant up`
