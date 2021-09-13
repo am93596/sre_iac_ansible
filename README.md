@@ -4,10 +4,10 @@
 IAC means managing your IT infrastructure using provisioning scripts instead of carrying out the tasks manually. For example, launching an EC2 instance involves a lot of manual handling (clicks, etc) - a script of instructions could be written to carry this out for you.
 
 ## What is Ansible?
-Ansible is an open-source configuration management tool. It is used for automating IT configuration tasks, such as launching and provisioning an EC2 instance
+Ansible is an open-source configuration management tool. It is used for automating IT configuration tasks, such as launching and provisioning an EC2 instance.
 
 ## What are the benefits of Ansible?
-
+Ansible is free and easy to use for automating tasks more efficiently. It is also provides scalability, *unfinished*
 
 # Ansible controller and agent nodes set up guide
 - Clone this repo and run `vagrant up`
