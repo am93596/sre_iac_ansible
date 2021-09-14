@@ -1,36 +1,75 @@
 # Infrastructure As Code (IAC) with Ansible
 
 ## What is IAC?
-IAC means managing your IT infrastructure using provisioning scripts instead of carrying out the tasks manually. For example, launching an EC2 instance involves a lot of manual handling (clicks, etc) - a script of instructions could be written to carry this out for you.
+IAC means managing your IT infrastructure using provisioning scripts instead of carrying out the tasks manually. For example, launching an EC2 instance involves a lot of manual handling (clicks, etc) - a script of instructions could be written to carry this out for you.  
 
 ### Types of IAC
-- Configuration Management
-- Orchestration
-
+There are 2 types of IAC: configuration management (e.g. for managing provisioning for vagrant machines, or setting up EC2 instances), and orchestration (e.g. for setting up EC2 security groups)  
 ### Which tools are used for push config and pull config
+- Push:
+  - Ansible
+  - SaltStack
+- Pull:
+  - Puppet
+  - Chef  
 
 ## What is Ansible?
 Ansible is an open-source configuration management tool. It is used for automating IT configuration tasks, such as launching and provisioning an EC2 instance.
 
 ## What are the benefits of Ansible?
-Ansible is free and easy to use for automating tasks more efficiently. It is also provides scalability, *unfinished*
+Ansible is free and easy to use for automating tasks more efficiently. It is also provides scalability, as you can run commands on any number of machines at once, and it would be much faster than individually running them for each machine.  
 
 ## Why should we use Ansible
+It makes the job of SRE easier, as it provides a simple way of quickly automating tasks, and is flexible in how many machines it is used for, and what you can do with it.  
 
 ## Diagram for Ansible on prem, hybrid, and public
+*unfinished*
 
-## Installation and setting up Ansible controller with 2 agent nodes - including commands
+## Installation and setting up Ansible controller with 2 agent nodes
+1. Clone this repository  
+2. In Git bash, make sure you run `vagrant destroy`/destroy any other vagrant processes  
+3. `vagrant up`
+4. ssh into each machine, and run:  
+```bash
+sudo apt-get update -y
+sudo apt-get upgrade -y
+```  
+5. Then ssh into controller machine, and run:  
+```bash
+sudo apt-get install software-properties-common -y
+sudo apt-add-repository ppa:ansible/ansible -y
+sudo apt-get install ansible -y
+ansible --version
+```  
+6. To ssh into the web machine from inside the controller machine, run `ssh vagrant@192.168.33.10`; password: `vagrant`. When you are finished, enter `exit` to get back to the controller machine.  
+7. To ssh into the db machine from inside the controller machine, run `ssh vagrant@192.168.33.11`; password: `vagrant`. When you are finished, enter `exit` to get back to the controller machine.  
 
-## Default Directory Structure for Ansible
+## Default Directory Structure for Ansible  
+/etc/ansible |  
+              - roles  
+              - ansible.cfg  
+              - hosts  
 
-## What is the Inventory/hosts file and its purpose
+## What is the Inventory/hosts file and its purpose  
+The inventory file, also known as the hosts file, holds the list of agent nodes that are connected to the ansible controller. The file holds the group names (for classifying nodes), the IP for each machine, the method of connection, the default user for the machine, and the password for accessing the machine.  
 
-## What should be added to hosts file to establish secure connection between ansible controller and agent nodes? - include code
-
+## Using hosts file to establish a secure connection between ansible controller and agent nodes  
+1. In the controller machine, run `cd /etc/ansible`, then `sudo nano hosts`  
+2. Paste in the following:
+```
+[web]
+192.168.33.10 ansible_connection=ssh ansible_user=vagrant ansible_ssh_pass=vagrant
+[db]
+192.168.33.11 ansible_connection=ssh ansible_user=vagrant ansible_ssh_pass=vagrant
+```
 ## What are ansible `Ad-hoc commands`
-
-- add a structure of creating ad-hoc commands `ansible all -m ping`
-- include all the ad-hoc commands we have used today in this documentation
+Ansible ad-hoc commands are quick functions that can be run individually on more than one machine at a time.  
+- Basic structure: `ansible <group name> <flags> <command> "<command to run inside the machine>"`  
+- Examples:  
+  - `ansible all -m ping`  
+  - `ansible db -a "uname -a"`  
+  - `ansible all -a "date"`  
+  - `ansible web -a "free"`  
 
 ## What are Ansible Playbooks?
 - Ansible playbooks provide another way to use Ansible to automate tasks.
