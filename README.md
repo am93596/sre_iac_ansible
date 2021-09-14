@@ -62,78 +62,119 @@ Ansible is free and easy to use for automating tasks more efficiently. It is als
 - `ansible web -a "sudo systemctl status nginx"`
 - Enter the IP address for the machine into the browser, and you should see the nginx page
 
-Task:
-- Create a playbook to install and configure node on the web machine
-- Create a playbook to install and configure mongodb on the db machine
-- Get the node app to work with /posts
-- HINT: ansible official documentation available
-- Youtube
-- Stack Overflow
-- Configure nginx reverse proxy
+## Create a playbook to install and configure node and reverse proxy on the web machine
+- `sudo nano node_playbook.yml`
+```yaml
+# Create a playbook to install and configure node.js etc on the web machine
+# web 192.168.33.10
+---
+- hosts: web
+  gather_facts: yes
 
+  become: true
 
-# Ansible controller and agent nodes set up guide
-- Clone this repo and run `vagrant up`
-- `(double check syntax/intendation)`
+  tasks:
+  - name: clone repo with the app folders
+    git:
+      repo: https://github.com/am93596/SRE_Intro_To_Cloud_Computing.git
+      dest: /home/ubuntu
+      clone: yes
+      update: yes
+  - name: install python software properties
+    apt: pkg=software-properties-common state=present
 
-## We will use 18.04 ubuntu for ansible controller and agent nodes set up 
-### Please ensure to refer back to your vagrant documentation
+  - name: Install python-software-properties
+    apt: pkg=software-properties-common state=present
 
-- **You may need to reinstall plugins or dependencies required depending on the OS you are using.**
+  - name: Add nodejs apt key
+    apt_key:
+      url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+      state: present
 
-```vagrant 
-# -*- mode: ruby -*-
-# vi: set ft=ruby :
+  - name: Add nodejs
+    apt_repository:
+      repo: deb https://deb.nodesource.com/node_13.x bionic main
+      update_cache: yes
 
-# All Vagrant configuration is done below. The "2" in Vagrant.configure
-# configures the configuration version (we support older styles for
-# backwards compatibility). Please don't change it unless you know what
+  - name: Install nodejs
+    apt: pkg=nodejs state=present
 
-# MULTI SERVER/VMs environment 
-#
-Vagrant.configure("2") do |config|
+  - name: install nodejs-legacy
+    command: "apt-get install nodejs-legacy"
 
-# creating first VM called web  
-  config.vm.define "web" do |web|
-    
-    web.vm.box = "bento/ubuntu-18.04"
-   # downloading ubuntu 18.04 image
+  - name: install pm2
+    command: "npm install pm2 -g"
+    args:
+      chdir: "/home/ubuntu/app"
 
-    web.vm.hostname = 'web'
-    # assigning host name to the VM
-    
-    web.vm.network :private_network, ip: "192.168.33.10"
-    #   assigning private IP
-    
-    config.hostsupdater.aliases = ["development.web"]
-    # creating a link called development.web so we can access web page with this link instread of an IP   
-        
-  end
-  
-# creating second VM called db
-  config.vm.define "db" do |db|
-    
-    db.vm.box = "bento/ubuntu-18.04"
-    
-    db.vm.hostname = 'db'
-    
-    db.vm.network :private_network, ip: "192.168.33.11"
-    
-    config.hostsupdater.aliases = ["development.db"]     
-  end
+  - name: install npm
+    command: "npm install"
 
- # creating are Ansible controller
-  config.vm.define "controller" do |controller|
-    
-    controller.vm.box = "bento/ubuntu-18.04"
-    
-    controller.vm.hostname = 'controller'
-    
-    controller.vm.network :private_network, ip: "192.168.33.12"
-    
-    config.hostsupdater.aliases = ["development.controller"] 
-    
-  end
+  - name: reverse proxy
+    shell: |
+      rm /etc/nginx/sites-available/default
+      ln -s /home/ubuntu/config_files/default /etc/nginx/sites-available/default
+      nginx -t
+      systemctl restart nginx
 
-end
+  - name: set db_host env variable and start app
+    environment:
+      DB_HOST: mongodb://192.168.33.11:27017/posts
+    shell: |
+      cd /home/ubuntu/app
+      node seeds/seed.js
+      pm2 kill
+      pm2 start app.js
 ```
+## Create a playbook to install and configure mongodb on the db machine
+- `sudo nano mongodb_playbook.yml`
+```yaml
+# Create a playbook to install and configure mongodb on the db machine
+# db 192.168.33.11
+---
+- hosts: db
+
+  gather_facts: yes
+
+  become: true
+
+  tasks:
+  - name: clone repo with the app folders
+    git:
+      repo: https://github.com/am93596/SRE_Intro_To_Cloud_Computing.git
+      dest: /home/ubuntu
+      clone: yes
+      update: yes
+
+  - name: add key for mongodb
+    shell: |
+      wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add
+
+  - name: connect to mongodb repo
+    shell: |
+      echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+
+  - name: install and start mongodb
+    shell: |
+      sudo apt-get update -y
+      sudo apt-get install -y mongodb-org
+      sudo systemctl start mongod
+      sudo systemctl enable mongod
+
+  - name: remove original mongod.conf and replace with new one
+    shell: |
+      sudo rm /etc/mongod.conf
+      sudo ln -s /home/ubuntu/config_files/mongod.conf /etc/mongod.conf
+
+  - name: restart mongodb
+    shell: |
+      sudo systemctl restart mongod
+```
+## Run the commands to start the app
+In the controller machine, in /etc/ansible folder, run the following:
+```bash
+ansible-playbook nginx_playbook.yml
+ansible-playbook mongodb_playbook.yml
+ansible-playbook node_playbook.yml
+```  
+Then type the following into your browser: `192.168.33.10`, and then `192.168.33.10/posts`.
