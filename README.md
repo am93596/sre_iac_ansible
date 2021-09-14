@@ -172,42 +172,40 @@ Ansible ad-hoc commands are quick functions that can be run individually on more
 # db 192.168.33.11
 ---
 - hosts: db
-
   gather_facts: yes
-
   become: true
 
   tasks:
-  - name: clone repo with the app folders
-    git:
-      repo: https://github.com/am93596/SRE_Intro_To_Cloud_Computing.git
-      dest: /home/ubuntu
-      clone: yes
-      update: yes
+  - name: install mongodb
+    apt: pkg=mongodb state=present
 
-  - name: add key for mongodb
-    shell: |
-      wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add
+  - name: remove mongod.conf file
+    file:
+      path: /etc/mongod.conf
+      state: absent
 
-  - name: connect to mongodb repo
-    shell: |
-      echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+  - name: touch file and set permissions
+    file:
+      path: /etc/mongod.conf
+      state: touch
+      mode: u=rw,g=r,o=r
 
-  - name: install and start mongodb
-    shell: |
-      sudo apt-get update -y
-      sudo apt-get install -y mongodb-org
-      sudo systemctl start mongod
-      sudo systemctl enable mongod
-
-  - name: remove original mongod.conf and replace with new one
-    shell: |
-      sudo rm /etc/mongod.conf
-      sudo ln -s /home/ubuntu/config_files/mongod.conf /etc/mongod.conf
-
-  - name: restart mongodb
-    shell: |
-      sudo systemctl restart mongod
+  - name: insert contents for mongod.conf
+    blockinfile:
+      path: /etc/mongod.conf
+      backup: yes
+      block: |
+        "storage:
+          dbPath: /var/lib/mongodb
+          journal:
+            enabled: true
+        systemLog:
+          destination: file
+          logAppend: true
+          path: /var/log/mongodb/mongod.log
+        net:
+          port: 27017
+          bindIp: 0.0.0.0"
 ```
 ## Run the commands to start the app
 In the controller machine, in /etc/ansible folder, run the following:
