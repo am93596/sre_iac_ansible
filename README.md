@@ -346,7 +346,7 @@ localhost ansible_python_interpreter=/usr/local/bin/python3
 [aws]
 ec2-instance ansible_host=ec2-ip ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/sre_key.pem
 ```
-- ssh into the machine, then exit
+- ssh into the machine - if this fails, then add `sudo` to the start of the ssh command, then exit
 
 - then do `sudo ansible aws -m ping --ask-vault-pass`
 
