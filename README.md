@@ -215,3 +215,138 @@ ansible-playbook mongodb_playbook.yml
 ansible-playbook node_playbook.yml
 ```  
 Then type the following into your browser: `192.168.33.10`, and then `192.168.33.10/posts`.
+
+### To import another playbook at the end/beginning of a playbook
+```yaml
+- name: running the next playbook
+  import_playbook: 
+```
+*unfinished*
+
+## Hybrid Cloud Infrastructure
+### Install dependencies
+- `sudo apt-get install tree -y`
+- `cd /etc/ansible`
+- `tree` -> displays the directory tree structure
+- `sudo apt-add-repository --yes --update ppa:ansible/ansible`
+- `sudo apt install python3-pip`
+- `pip3 install awscli`
+- `pip3 install boto boto3`
+- `sudo apt-get upgrade -y`
+
+### Checking installation
+- `aws --version`
+- outcome should be: `aws-cli/1.20.41 Python/3.6.9 Linux/4.15.0-151-generic botocore/1.21.41`
+- if command not found, enter `exit`, then ssh back into the controller machine, and rerun the `aws --version` command
+- `python --version` -> if this is 2.7.17, run the following command:
+    - `alias python=python3`
+    - if you run `python --version` again, it should be `Python 3.6.9`
+
+### Create an ansible vault file to secure the AWS keys
+- need to make .pem file accessible to ansible
+    - copy the .pem file into ansible controller to ssh into ec2 instance
+        - in a new git bash, `cd ~/.ssh` and `cat sre_key.pem`
+        - in the controller git bash, in the same folder, `sudo nano sre_key.pem`, and paste in the contents, then save and close
+        - run `sudo chmod 400 sre_key.pem`
+    - generate ssh key in ansible controller called sre_key
+        - `ssh-keygen -t rsa -b 4096`
+        - name: `sre_key`, then press `Enter` for the other questions
+- `cd /etc/ansible`
+- `tree`
+- `sudo mkdir group_vars`
+- `cd group_vars`
+- `sudo mkdir all`
+- `cd all`
+- `sudo ansible-vault create pass.yml`
+    - New Vault password: `12345678`
+    - enter the following:
+    ```
+    aws_access_key: <copy from excel file>
+    aws_secret_key: <copy from excel file>
+    ```
+    - to exit, use `Esc` then `:wq!`
+    - `sudo cat pass.yml` -> you can't see the contents, because they are encrypted :)
+    - `sudo chmod 666 pass.yml`
+
+*For running ad-hoc command on a machine, add `--ask-vault-pass` to the end, then enter your New Vault password*
+*E.g. `ansible db -m ping --ask-vault-pass`*
+
+### Making the ec2 playbook
+- `cd /etc/ansible`
+- `sudo nano create_ec2.yml`
+- Enter the following contents:
+```yaml
+# launch ec2
+---
+- hosts: localhost
+  connection: local
+  gather_facts: true
+  become: true
+  vars:
+    key_name: sre_key
+    region: eu-west-1
+    image: ami-0943382e114f188e8
+    id: "SRE_Amy_Ansible_EC2"
+    sec_group: "sg-055b237d59507ce50"
+    subnet_id: "subnet-0429d69d55dfad9d2"
+    # add if ansible by default uses python 2.7.17
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+
+    - name: Facts
+      block:
+
+        - name: Get instances facts
+          ec2_instance_facts:
+            aws_access_key: "{{aws_access_key}}"
+            aws_secret_key: "{{aws_secret_key}}"
+            region: "{{ region }}"
+          register: result
+
+
+    - name: Provisioning EC2 instances
+      block:
+
+      - name: Upload public key to AWS
+        ec2_key:
+          name: "{{ key_name }}"
+          key_material: "{{ lookup('file', '~/.ssh/{{ key_name }}.pub') }}"
+          region: "{{ region }}"
+          aws_access_key: "{{aws_access_key}}"
+          aws_secret_key: "{{aws_secret_key}}"
+
+
+      - name: Provision instance(s)
+        ec2:
+          aws_access_key: "{{aws_access_key}}"
+          aws_secret_key: "{{aws_secret_key}}"
+          assign_public_ip: true
+          key_name: "{{ key_name }}"
+          id: "{{ id }}"
+          vpc_subnet_id: "{{ subnet_id }}"
+          group_id: "{{ sec_group }}"
+          image: "{{ image }}"
+          instance_type: t2.micro
+          region: "{{ region }}"
+          wait: true
+          count: 1
+          instance_tags:
+            Name: sre_amy_ansible_ec2_app
+        tags: ['never', 'create_ec2']
+```
+- Save and close
+
+- Run `sudo ansible-playbook create_ec2.yml --ask-vault-pass --tags create_ec2`
+
+- Edit hosts file in /etc/ansible: paste in the following (put in your instance's IP)
+```yaml
+[local]
+localhost ansible_python_interpreter=/usr/local/bin/python3
+
+[aws]
+ec2-instance ansible_host=ec2-ip ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/sre_key.pem
+```
+- ssh into the machine, then exit
+
+- then do `sudo ansible aws -m ping --ask-vault-pass`
+
