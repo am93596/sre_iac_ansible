@@ -91,6 +91,11 @@ Ansible ad-hoc commands are quick functions that can be run individually on more
 
   # Add instructions to install nginx on web machine
   tasks:
+  - name: sudo apt-get update -y
+    command: "apt-get update -y"
+  - name: sudo apt-get upgrade -y
+    command: "apt-get upgrade -y"
+
   - name: Install Nginx
     apt: pkg=nginx state=present
     
@@ -113,6 +118,11 @@ Ansible ad-hoc commands are quick functions that can be run individually on more
   become: true
 
   tasks:
+  - name: sudo apt-get update -y
+    command: "apt-get update -y"
+  - name: sudo apt-get upgrade -y
+    command: "apt-get upgrade -y"
+
   - name: clone repo with the app folders
     git:
       repo: https://github.com/am93596/SRE_Intro_To_Cloud_Computing.git
@@ -176,6 +186,11 @@ Ansible ad-hoc commands are quick functions that can be run individually on more
   become: true
 
   tasks:
+  - name: sudo apt-get update -y
+    command: "apt-get update -y"
+  - name: sudo apt-get upgrade -y
+    command: "apt-get upgrade -y"
+ 
   - name: install mongodb
     apt: pkg=mongodb state=present
 
@@ -287,8 +302,8 @@ Then type the following into your browser: `192.168.33.10`, and then `192.168.33
     region: eu-west-1
     image: ami-0943382e114f188e8
     id: "SRE_Amy_Ansible_EC2"
-    sec_group: "sg-055b237d59507ce50"
-    subnet_id: "subnet-0429d69d55dfad9d2"
+    sec_group: "security group ID"
+    subnet_id: "subnet ID"
     # add if ansible by default uses python 2.7.17
     ansible_python_interpreter: /usr/bin/python3
   tasks:
@@ -349,4 +364,70 @@ ec2-instance ansible_host=ec2-ip ansible_user=ubuntu ansible_ssh_private_key_fil
 - ssh into the machine - if this fails, then add `sudo` to the start of the ssh command, then exit
 
 - then do `sudo ansible aws -m ping --ask-vault-pass`
+- 
+### If it works, we can run the nginx playbook
+- `sudo nano nginx_playbook`
+- change `web` to `aws`
+- run the playbook: `ansible-playbook nginx_playbook.yml --ask-vault-pass`
 
+### Then make a new YAML file to make a db EC2 instance
+```yaml
+# launch ec2
+---
+- hosts: localhost
+  connection: local
+  gather_facts: True
+  become: True
+  vars:
+    key_name: sre_amy
+    region: eu-west-1
+    image: ami-0943382e114f188e8
+    id: "SRE_Amy_Ansible_EC2_db"
+    sec_group: "security group ID"
+    subnet_id: "subnet ID"
+    # add if ansible by default uses python 2.7.17
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+
+    - name: Facts
+      block:
+
+        - name: Get instances facts
+          ec2_instance_facts:
+            aws_access_key: "{{aws_access_key}}"
+            aws_secret_key: "{{aws_secret_key}}"
+            region: "{{ region }}"
+          register: result
+
+
+    - name: Provisioning EC2 instances
+      block:
+
+      - name: Upload public key to AWS
+        ec2_key:
+          name: "{{ key_name }}"
+          key_material: "{{ lookup('file', '~/.ssh/{{ key_name }}.pub') }}"
+          region: "{{ region }}"
+          aws_access_key: "{{aws_access_key}}"
+          aws_secret_key: "{{aws_secret_key}}"
+
+
+      - name: Provision instance(s)
+        ec2:
+          aws_access_key: "{{aws_access_key}}"
+          aws_secret_key: "{{aws_secret_key}}"
+          assign_public_ip: true
+          key_name: "{{ key_name }}"
+          id: "{{ id }}"
+          vpc_subnet_id: "{{ subnet_id }}"
+          group_id: "{{ sec_group }}"
+          image: "{{ image }}"
+          instance_type: t2.micro
+          region: "{{ region }}"
+          wait: true
+          count: 1
+          instance_tags:
+            Name: sre_amy_ansible_ec2_db
+        tags: ['never', 'create_ec2']
+```
+- Run the playbook, then add the IP of the new ec2 instance to the hosts file, and run the mongodb playbook. Then run the node playbook. App should appear in browser
